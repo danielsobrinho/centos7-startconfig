@@ -1,0 +1,120 @@
+#!/bin/sh
+
+fancy_echo() {
+  printf "\n%b\n" "$1\n"
+  sleep 1
+}
+
+check_sistem(){
+  SO=$(sudo cat /etc/issue | tr -s [:space:] | cut -d ' ' -f 1)
+  VERSION=$(sudo cat /etc/issue | tr -s [:space:] | cut -d ' ' -f 2)
+  #MASTERVERSION=$(echo ${VERSION} | cut -d '.' -f 1)
+
+  #if [ "${SO}" != "Deepin" ]; then
+  #  fancy_echo "Ops, não é possível utilizar esse script para SO diferentes do Ubuntu 16";
+  #  exit 0;
+  #fi
+
+  #if [ "${MASTERVERSION}" != "16" ]; then
+  #  fancy_echo "Ops, não é possível utilizar esse script para SO diferentes do Ubuntu 16";
+  #  exit 0;
+  #fi
+}
+
+fancy_echo "Verificando sistema ..."
+  check_sistem
+
+fancy_echo "Atualizando sistema ..."
+  yum -y update
+  yum -y upgrade
+
+fancy_echo "Instalando Repositórios Iniciais ..."
+  rpm --import /etc/pki/rpm-gpg/RPM-GPG-KEY*
+  yum -y install epel-release
+
+fancy_echo "Instalando git ..."
+  yum -y install git
+
+fancy_echo "Instalando curl ..."
+  yum -y install curl
+
+fancy_echo "Instalando nano ..."
+  yum -y install nano
+
+fancy_echo "Instalando wget ..."
+  yum -y install wget
+
+fancy_echo "Instalando lynx ..."
+  yum -y install lynx
+
+fancy_echo "Instalando htop ..."
+  yum -y install htop
+
+fancy_echo "Instalando byobu ..."
+  yum -y install byobu
+
+fancy_echo "Instalando NSCD ..."
+  yum -y install nscd
+
+fancy_echo "Instalando docker ..."
+  yum -y install docker docker.io docker-swarm
+
+fancy_echo "Instalando Apache2, PHP7.X, MariaDB e libs necessárias do PHP7.0 e Apache2 ..."
+  yum -y install mariadb-server mariadb
+  systemctl start mariadb.service
+  systemctl enable mariadb.service
+  fancy_echo "TERMINAR A CONFIGURAÇÃO DO MYSQL: mysql_secure_installation"
+
+  yum -y install httpd
+  systemctl start httpd.service
+  systemctl enable httpd.service
+  fancy_echo "Apache Rodando..."
+  
+  firewall-cmd --permanent --zone=public --add-service=http 
+  firewall-cmd --permanent --zone=public --add-service=https
+  firewall-cmd --reload
+  fancy_echo "Firewall Liberado Somente para HTTP"
+  
+  rpm -Uvh http://rpms.remirepo.net/enterprise/remi-release-7.rpm
+  yum -y install yum-utils
+  yum -y update
+  
+  yum-config-manager --enable remi-php72
+  yum -y install php php-opcache
+  systemctl restart httpd.service
+  fancy_echo "Ambiente PHP 7.2 Configurado"
+  
+  yum search php
+  yum -y install php-gd php-ldap php-odbc php-pear php-xml php-xmlrpc php-mbstring php-soap curl curl-devel
+  yum -y install php-fpm
+  systemctl restart httpd.service
+  fancy_echo "Libs Principais PHP 7.2 Instaladas"
+  
+  yum -y install phpMyAdmin
+  fancy_echo "phpMyAdmin Instalado, lembre de configurar o servidor: mysql_secure......"
+  fancy_echo "Configure o phpMyAdmin:"
+  fancy_echo "nano /etc/httpd/conf.d/phpMyAdmin.conf"  
+  fancy_echo "# <RequireAny>"
+  fancy_echo "# Require ip 127.0.0.1"
+  fancy_echo "# Require ip ::1"
+  fancy_echo "# </RequireAny>"
+  fancy_echo " Require all granted"
+  fancy_echo " "
+  fancy_echo "nano /etc/phpMyAdmin/config.inc.php"
+  fancy_echo "$cfg['Servers'][$i]['auth_type']     = 'http';"
+  
+  systemctl restart httpd.service
+  
+  fancy_echo "Testando Apache:"
+  apachectl configtest
+  
+fancy_echo "Instalando Composer ..."
+  yum -y install composer
+  
+fancy_echo "Atualizando sistema ..."
+  yum -y update
+  yum -y upgrade
+  
+fancy_echo "Limpando Caches do Sistema ..."
+  yum clean all
+  yum -y upgrade
